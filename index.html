@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Rich Text Editor</title>
+  <link rel="icon" href="sitefiles/icon.png" type="image/png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <style>
+    :root {
+      --bg-dark: #121212;
+      --bg-medium: #222;
+      --bg-light: #333;
+      --bg-button: #444;
+      --bg-button-hover: #555;
+      --text-color: #eee;
+      --text-color-secondary: #ccc;
+      --placeholder-color: #777;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+    }
+
+    #toolbarContainer {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: var(--bg-light);
+      padding: 5px;
+    }
+
+    #toolbar {
+      border-radius: 5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    #editorContainer {
+      border: 1px solid var(--bg-light);
+      margin: 10px auto;
+      padding: 5px;
+      background-color: var(--bg-medium);
+      overflow: hidden;
+      position: relative;
+      max-width: 1200px;
+    }
+
+    #editor {
+      width: 100%;
+      min-height: 300px;
+      border: none;
+      padding: 5px;
+      outline: none;
+      background-color: var(--bg-medium);
+      color: var(--text-color);
+      resize: none;
+      overflow: auto;
+      position: relative;
+    }
+
+    #editor:empty::before {
+      content: attr(data-placeholder);
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      color: var(--placeholder-color);
+      pointer-events: none;
+    }
+
+    #toolbar button,
+    #toolbar select,
+    #toolbar input[type="file"],
+    #toolbar input[type="color"] {
+      padding: 5px 10px;
+      cursor: pointer;
+      background-color: var(--bg-button);
+      color: var(--text-color);
+      border: none;
+      border-radius: 3px;
+    }
+
+    #toolbar button:hover,
+    #toolbar select:hover,
+    #toolbar input[type="file"]:hover {
+      background-color: var(--bg-button-hover);
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48
+    }
+
+    h1,
+    h2 {
+      color: var(--text-color-secondary);
+    }
+
+    #font-family-select {
+      font-family: sans-serif;
+    }
+
+    .resizable-image {
+      max-width: 100%;
+      height: auto;
+      cursor: grab;
+    }
+
+    .resizable-image.dragging {
+      cursor: grabbing;
+    }
+
+    .resizable-image.selected {
+      outline: 2px dashed var(--bg-button-hover);
+      cursor: move;
+    }
+
+    .resize-handle {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 12px;
+      height: 12px;
+      background-color: var(--bg-button);
+      border: 1px solid var(--text-color);
+      z-index: 1;
+      cursor: nwse-resize;
+    }
+
+    #toolbar button:hover,
+    #toolbar select:hover,
+    #toolbar input[type="file"]:hover {
+      cursor: pointer;
+    }
+
+    #htmlPopover {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      z-index: 1000;
+    }
+
+    #htmlPopoverContent {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: var(--bg-light);
+      color: var(--text-color);
+      padding: 20px;
+      border-radius: 5px;
+      width: 80%;
+      max-width: 800px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    }
+
+    #htmlPopover textarea {
+      width: 100%;
+      height: 300px;
+      background-color: var(--bg-medium);
+      color: var(--text-color);
+      border: none;
+      padding: 5px;
+      resize: vertical;
+      font-family: monospace;
+    }
+
+    #htmlPopoverClose {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 20px;
+      color: var(--text-color);
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: var(--bg-light);
+      min-width: 160px;
+      box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+      border-radius: 5px;
+      padding: 5px;
+    }
+
+    .dropdown-content button {
+      color: var(--text-color);
+      padding: 5px 10px;
+      text-decoration: none;
+      display: block;
+      border: none;
+      background-color: transparent;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+    }
+
+    .dropdown-content button:hover {
+      background-color: var(--bg-button-hover);
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    /* Style for the context menu */
+    #textContextMenu,
+    #contextMenu {
+      position: absolute;
+      background-color: var(--bg-light);
+      color: var(--text-color);
+      border-radius: 5px;
+      padding: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      display: none;
+      z-index: 1001;
+      min-width: 150px;
+    }
+
+    #textContextMenu button,
+    #contextMenu button,
+    #textContextMenu .dropdown-content button {
+      color: var(--text-color);
+      padding: 5px 10px;
+      text-decoration: none;
+      display: block;
+      border: none;
+      background-color: transparent;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+    }
+
+    #textContextMenu button:hover,
+    #contextMenu button:hover,
+    #textContextMenu .dropdown-content button:hover {
+      background-color: var(--bg-button-hover);
+    }
+
+    #textContextMenu .dropdown {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .break-text {
+      float: left !important;
+      margin-right: 10px;
+    }
+
+    .ignore-line-position {
+      position: absolute !important;
+      z-index: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="toolbarContainer">
+    <div id="toolbar">
+
+      <button onclick="formatDoc('bold')" title="Bold"><span class="material-symbols-outlined">format_bold</span></button>
+      <button onclick="formatDoc('italic')" title="Italic"><span class="material-symbols-outlined">format_italic</span></button>
+      <button onclick="formatDoc('underline')" title="Underline"><span class="material-symbols-outlined">format_underlined</span></button>
+      <button onclick="formatDoc('strikeThrough')" title="Strikethrough"><span class="material-symbols-outlined">format_strikethrough</span></button>
+      <button onclick="formatDoc('superscript')" title="Superscript"><span class="material-symbols-outlined">superscript</span></button>
+
+      <button onclick="formatDoc('justifyLeft')" title="Align Left"><span class="material-symbols-outlined">format_align_left</span></button>
+      <button onclick="formatDoc('justifyCenter')" title="Align Center"><span class="material-symbols-outlined">format_align_center</span></button>
+      <button onclick="formatDoc('justifyRight')" title="Align Right"><span class="material-symbols-outlined">format_align_right</span></button>
+
+      <button onclick="viewHTML()" title="View HTML"><span class="material-symbols-outlined">code</span></button>
+
+      <button onclick="formatDoc('insertUnorderedList')" title="Unordered List"><span class="material-symbols-outlined">format_list_bulleted</span></button>
+      <button onclick="formatDoc('insertOrderedList')" title="Ordered List"><span class="material-symbols-outlined">format_list_numbered</span></button>
+
+      <button onclick="formatDoc('createLink', prompt('Enter URL:', ''))" title="Link"><span class="material-symbols-outlined">link</span></button>
+      <button onclick="formatDoc('unlink')" title="Unlink"><span class="material-symbols-outlined">link_off</span></button>
+
+      <!-- Image Upload -->
+      <button onclick="uploadImage()" title="Upload Image"><span class="material-symbols-outlined">upload_file</span></button>
+      <button onclick="insertImageFromUrl()" title="Insert Image from URL"><span class="material-symbols-outlined">image</span></button>
+
+
+      <button onclick="insertYouTubeVideo()" title="YouTube Video"><span class="material-symbols-outlined">play_circle</span></button>
+
+      <button onclick="formatDoc('removeFormat')" title="Clear Formatting"><span class="material-symbols-outlined">format_clear</span></button>
+      <button onclick="exportHTML()" title="Export HTML"><span class="material-symbols-outlined">file_download</span></button>
+
+      <select id="font-family-select" onchange="formatDoc('fontName', this.value)" title="Font Family">
+        <option value="Arial">Arial</option>
+        <option value="Verdana">Verdana</option>
+        <option value="Tahoma">Tahoma</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Courier New">Courier New</option>
+      </select>
+
+      <select id="font-size-select" onchange="formatDoc('fontSize', this.value)" title="Font Size">
+        <option value="1">Very Small</option>
+        <option value="2">Smaller</option>
+        <option value="3">Normal</option>
+        <option value="4">Medium</option>
+        <option value="5">Large</option>
+        <option value="6">Larger</option>
+        <option value="7">Very Large</option>
+      </select>
+
+      <input type="color" id="textColor" onchange="formatDoc('foreColor', this.value)" title="Text Color">
+      <input type="color" id="highlightColor" onchange="highlightText(this.value)" title="Highlight Color">
+
+      <!-- Dropdown -->
+      <div class="dropdown">
+        <button class="dropdown-button"><span class="material-symbols-outlined">add</span>Insert</button>
+        <div class="dropdown-content">
+          <button onclick="insertHorizontalRule()">Horizontal Rule</button>
+          <button onclick="openHTMLPopover()">Custom HTML</button>
+          <button onclick="insertIframePrompt()">Iframe</button>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="editorContainer">
+    <div id="editor" contenteditable="true" data-placeholder="Start writing here...">
+    </div>
+  </div>
+
+  <!-- HTML Popover -->
+  <div id="htmlPopover">
+    <div id="htmlPopoverContent">
+      <span id="htmlPopoverClose" onclick="closeHTMLPopover()">X</span>
+      <textarea id="htmlCode"></textarea>
+      <button onclick="insertCustomHTML()">Insert HTML</button>
+
+    </div>
+  </div>
+
+  <!-- Image Context Menu -->
+  <div id="contextMenu">
+    <button onclick="selectCurrentImage()">Select Image</button>
+    <button onclick="deleteImage()">Delete Image</button>
+    <button id="insertLinkButton" onclick="insertLinkToImage()">Insert Link</button>
+    <button id="removeLinkButton" onclick="removeLinkFromImage()">Unlink</button>
+    <button onclick="breakTextAroundImage()">Insert at Nearest Line</button>
+    <button onclick="ignoreLinePosition()">Ignore Line Position</button>
+  </div>
+
+  <!-- Text Context Menu -->
+  <div id="textContextMenu">
+    <div class="dropdown">
+      <button class="dropdown-button">Clear Formatting</button>
+      <div class="dropdown-content">
+        <button onclick="clearFormatting('all')">All Formatting</button>
+        <button onclick="clearFormatting('bold')">Bold</button>
+        <button onclick="clearFormatting('italic')">Italic</button>
+        <button onclick="clearFormatting('underline')">Underline</button>
+        <button onclick="clearFormatting('foreColor')">Text Color</button>
+        <button onclick="clearFormatting('backColor')">Highlight Color</button>
+      </div>
+    </div>
+    <button onclick="formatDoc('justifyLeft')">Align Left</button>
+    <button onclick="formatDoc('justifyCenter')">Align Center</button>
+    <button onclick="formatDoc('justifyRight')">Align Right</button>
+    <button onclick="formatDoc('underline')">Underline</button>
+    <input type="color" onchange="formatDoc('foreColor', this.value)" title="Text Color">
+    <input type="color" onchange="highlightText(this.value)" title="Highlight Color">
+  </div>
+
+  <script>
+    // Caching DOM elements
+    const editor = document.getElementById('editor');
+    const htmlCode = document.getElementById('htmlCode');
+    const htmlPopover = document.getElementById('htmlPopover');
+    const contextMenu = document.getElementById('contextMenu');
+    const textContextMenu = document.getElementById('textContextMenu');
+    const fontFamilySelect = document.getElementById('font-family-select');
+    const fontSizeSelect = document.getElementById('font-size-select');
+    const textColorInput = document.getElementById('textColor');
+    const highlightColorInput = document.getElementById('highlightColor');
+    const insertLinkButton = document.getElementById('insertLinkButton');
+    const removeLinkButton = document.getElementById('removeLinkButton');
+
+    let currentImage = null;
+    let aspectRatio = null;
+    let isDragging = false;
+    let isResizing = false;
+
+    // Function to get the currently selected font name
+    function getSelectedFontName() {
+      return document.queryCommandValue('fontName');
+    }
+
+    // Function to get the currently selected font size
+    function getSelectedFontSize() {
+      return document.queryCommandValue('fontSize');
+    }
+
+    // Function to get the currently selected foreColor
+    function getSelectedForeColor() {
+      return document.queryCommandValue('foreColor');
+    }
+
+    // Debounced function to update toolbar controls
+    let updateToolbarTimeout;
+
+    function updateToolbar() {
+      clearTimeout(updateToolbarTimeout);
+      updateToolbarTimeout = setTimeout(() => {
+        const selectedFontName = getSelectedFontName();
+        const selectedFontSize = getSelectedFontSize();
+        const selectedForeColor = getSelectedForeColor();
+
+        // Update font name
+        if (selectedFontName) {
+          fontFamilySelect.value = selectedFontName;
+        }
+
+        // Update font size
+        if (selectedFontSize) {
+          fontSizeSelect.value = selectedFontSize;
+        }
+
+        // Update text color
+        if (selectedForeColor) {
+          textColorInput.value = selectedForeColor;
+        }
+      }, 50); // Adjust delay as needed
+    }
+
+    function formatDoc(sCmd, sValue) {
+      document.execCommand(sCmd, false, sValue);
+      updateToolbar();
+    }
+
+    function exportHTML() {
+      let editorContent = editor.innerHTML;
+      editorContent = formatHTML(editorContent);
+      download("rich_text_export.html", editorContent);
+    }
+
+    function formatHTML(html) {
+      let tab = '\t';
+      let result = '';
+      let indent = '';
+
+      html.split(/>\s*</).forEach(function (element) {
+        if (element.match(/^\/.*$/)) {
+          indent = indent.substring(tab.length);
+        }
+
+        result += indent + '<' + element + '>\r\n';
+
+        if (element.match(/^.*[^/]$/) && !element.match(/^!/)) {
+          indent += tab;
+        }
+      });
+
+      return result.substring(1, result.length - 3);
+    }
+
+    function download(filename, text) {
+      var element = document.createElement('a');
+      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+      element.setAttribute('download', filename);
+
+      element.style.display = 'none';
+      document.body.appendChild(element);
+
+      element.click();
+
+      document.body.removeChild(element);
+    }
+
+    function insertYouTubeVideo() {
+      let videoIdOrUrl = prompt("Enter YouTube Video ID or URL:");
+      if (videoIdOrUrl) {
+        let videoId = extractYouTubeId(videoIdOrUrl);
+        if (videoId) {
+          let iframe = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+          formatDoc('insertHTML', iframe);
+        } else {
+          alert("Invalid YouTube Video ID or URL");
+        }
+      }
+    }
+
+    function extractYouTubeId(url) {
+      const regExp = /^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
+      const match = url.match(regExp);
+      return (match && match[1]) ? match[1] : null;
+    }
+
+    function viewHTML() {
+      htmlCode.value = editor.innerHTML;
+      htmlPopover.style.display = 'block';
+    }
+
+    function closeHTMLPopover() {
+      htmlPopover.style.display = 'none';
+    }
+
+    htmlPopover.addEventListener('click', function (event) {
+      if (event.target === this) {
+        closeHTMLPopover();
+      }
+    });
+
+    function uploadImage() {
+      let input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+
+      input.onchange = function (event) {
+        let file = event.target.files[0];
+        if (file) {
+          let reader = new FileReader();
+          reader.onload = function (e) {
+            insertImage(e.target.result);
+          }
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    }
+
+    function insertImageFromUrl() {
+      let imageUrl = prompt("Enter image URL:");
+      if (imageUrl) {
+        insertImage(imageUrl);
+      }
+    }
+
+    function insertImage(src) {
+      let imgTag = `<img src="${src}" class="resizable-image" style="max-width: 100%; height: auto;">`;
+      formatDoc('insertHTML', imgTag);
+
+      // Use setTimeout to ensure the image is fully rendered before selecting it.
+      setTimeout(() => {
+        const insertedImage = editor.querySelector(`img[src="${src}"]`);
+        selectImage(insertedImage);
+      }, 0);
+    }
+
+    function selectImage(img) {
+      if (currentImage) {
+        currentImage.classList.remove('selected');
+        removeResizeHandle();
+      }
+
+      currentImage = img;
+
+      if (!currentImage) {
+        return;
+      }
+
+      currentImage.classList.add('selected');
+      aspectRatio = currentImage.naturalWidth / currentImage.naturalHeight;
+      addResizeHandle(currentImage);
+    }
+
+    function addResizeHandle(img) {
+      let resizeHandle = document.createElement('div');
+      resizeHandle.classList.add('resize-handle');
+      img.parentNode.appendChild(resizeHandle);
+    }
+
+    function removeResizeHandle() {
+      let handle = document.querySelector('.resize-handle');
+      if (handle) {
+        handle.remove();
+      }
+    }
+
+    function startResize(e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      isResizing = true;
+
+      if (!currentImage) return;
+
+      let initialWidth = currentImage.width;
+      let initialHeight = currentImage.height;
+      let initialX = e.clientX;
+      let initialY = e.clientY;
+      let maintainAspectRatio = true;
+
+      function resizeImage(e) {
+        if (!isResizing || !currentImage) return;
+
+        let width = initialWidth + (e.clientX - initialX);
+        let height = initialHeight + (e.clientY - initialY);
+
+        if (e.ctrlKey) {
+          maintainAspectRatio = false;
+        } else {
+          maintainAspectRatio = true;
+        }
+
+        if (maintainAspectRatio) {
+          height = width / aspectRatio;
+        }
+
+        currentImage.style.width = width + 'px';
+        currentImage.style.height = height + 'px';
+      }
+
+      function stopResize() {
+        isResizing = false;
+
+        window.removeEventListener('mousemove', resizeImage);
+        window.removeEventListener('mouseup', stopResize);
+      }
+
+      window.addEventListener('mousemove', resizeImage);
+      window.addEventListener('mouseup', stopResize);
+    }
+
+    // Event delegation for image-related events
+    editor.addEventListener('click', (e) => {
+      if (e.target.tagName === 'IMG') {
+        selectImage(e.target);
+        e.stopPropagation(); // Prevent selection from propagating to the document
+      } else {
+        selectImage(null); // Deselect image if clicked outside
+      }
+    });
+
+    document.addEventListener('click', () => {
+      selectImage(null); // Deselect image when clicking outside the editor
+      hideContextMenu();
+      hideTextContextMenu();
+    });
+
+    // Call updateToolbar whenever the selection changes in the editor
+    editor.addEventListener('mouseup', updateToolbar);
+    editor.addEventListener('keyup', updateToolbar);
+    editor.addEventListener('selectstart', updateToolbar);
+    document.addEventListener('selectionchange', updateToolbar);
+
+    // Initial call to set the state on load:
+    updateToolbar();
+
+    function insertHorizontalRule() {
+      formatDoc('insertHorizontalRule');
+    }
+
+    // Context Menu Functions
+    function showContextMenu(e) {
+      e.preventDefault();
+      hideContextMenu();
+      hideTextContextMenu();
+      selectImage(e.target);
+
+      contextMenu.style.display = 'block';
+      contextMenu.style.left = e.clientX + 'px';
+      contextMenu.style.top = e.clientY + 'px';
+
+      // Check if the image is within a link and show/hide the unlink button accordingly
+      let parent = currentImage.parentNode;
+      if (parent && parent.tagName === 'A') {
+        insertLinkButton.style.display = 'none';
+        removeLinkButton.style.display = 'block';
+      } else {
+        insertLinkButton.style.display = 'block';
+        removeLinkButton.style.display = 'none';
+      }
+    }
+
+    function hideContextMenu() {
+      contextMenu.style.display = 'none';
+    }
+
+    function breakTextAroundImage() {
+      if (!currentImage) return;
+      currentImage.classList.add('break-text');
+    }
+
+    function ignoreLinePosition() {
+      if (!currentImage) return;
+      currentImage.classList.add('ignore-line-position');
+      currentImage.style.position = 'absolute';
+      currentImage.removeEventListener('mousedown', startImageDrag);
+      currentImage.addEventListener('mousedown', startImageDrag);
+    }
+
+    function startImageDrag(e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!currentImage) return;
+
+      isDragging = true;
+      currentImage.classList.add('dragging');
+
+      let initialX = e.clientX;
+      let initialY = e.clientY;
+      let initialTop = currentImage.offsetTop;
+      let initialLeft = currentImage.offsetLeft;
+
+      function imageDrag(e) {
+        if (!isDragging) return;
+
+        let deltaX = e.clientX - initialX;
+        let deltaY = e.clientY - initialY;
+
+        currentImage.style.top = (initialTop + deltaY) + 'px';
+        currentImage.style.left = (initialLeft + deltaX) + 'px';
+      }
+
+      function stopImageDrag() {
+        isDragging = false;
+        currentImage.classList.remove('dragging');
+
+        window.removeEventListener('mousemove', imageDrag);
+        window.removeEventListener('mouseup', stopImageDrag);
+      }
+
+      window.addEventListener('mousemove', imageDrag);
+      window.addEventListener('mouseup', stopImageDrag);
+    }
+
+    // Displays the appropriate context menu based on the element clicked
+    editor.addEventListener('contextmenu', showContextMenuOnEditor);
+    function showContextMenuOnEditor(e) {
+        if (e.target.tagName === 'IMG') {
+            showContextMenu(e);
+        }
+        else{
+            showTextContextMenu(e);
+        }
+    }
+
+    //Event Listerner for resizing.
+    editor.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('resize-handle')) {
+        startResize(e);
+      }
+    });
+
+    // New Functions
+    function highlightText(color) {
+      formatDoc('backColor', color);
+    }
+
+    function openHTMLPopover() {
+      htmlCode.value = ''; // Clear previous HTML
+      htmlPopover.style.display = 'block';
+    }
+
+    function insertCustomHTML() {
+      formatDoc('insertHTML', htmlCode.value);
+      closeHTMLPopover();
+    }
+
+    function insertIframePrompt() {
+      const url = prompt("Enter iframe URL:", "");
+      if (url) {
+        const width = prompt("Enter iframe width:", "560");
+        const height = prompt("Enter iframe height:", "315");
+        insertIframe(url, width, height);
+      }
+    }
+
+    function insertIframe(url, width, height) {
+      const iframeHTML = `<iframe src="${url}" width="${width}" height="${height}" frameborder="0" allowfullscreen></iframe>`;
+      formatDoc('insertHTML', iframeHTML);
+    }
+
+    //Text context menu
+    function showTextContextMenu(e) {
+      e.preventDefault();
+      hideTextContextMenu();
+      hideContextMenu();
+
+      textContextMenu.style.display = 'block';
+      textContextMenu.style.left = e.clientX + 'px';
+      textContextMenu.style.top = e.clientY + 'px';
+    }
+
+    function hideTextContextMenu() {
+      textContextMenu.style.display = 'none';
+    }
+
+    function clearFormatting(type) {
+      switch (type) {
+        case 'all':
+          formatDoc('removeFormat');
+          break;
+        case 'bold':
+          formatDoc('bold', false);
+          break;
+        case 'italic':
+          formatDoc('italic', false);
+          break;
+        case 'underline':
+          formatDoc('underline', false);
+          break;
+        case 'foreColor':
+          formatDoc('foreColor', 'black'); //resets the color
+          break;
+        case 'backColor':
+          // Properly clear the highlight color by unsetting the backColor.
+          formatDoc('backColor', 'transparent');
+          break;
+        default:
+          break;
+      }
+      hideTextContextMenu();
+    }
+
+    //Image Functions:
+    function selectCurrentImage() {
+      // Simply re-trigger the image selection process
+      if (currentImage) {
+        selectImage(currentImage);
+      }
+    }
+
+    function deleteImage() {
+      if (currentImage) {
+        currentImage.remove();
+        currentImage = null; // Clear the current image
+        hideContextMenu();    // Hide the context menu
+      }
+    }
+
+    function insertLinkToImage() {
+      if (currentImage) {
+        let url = prompt("Enter URL for the image link:", "");
+        if (url) {
+          // Wrap the image in an <a> tag
+          let link = document.createElement('a');
+          link.href = url;
+          currentImage.parentNode.insertBefore(link, currentImage);
+          link.appendChild(currentImage);
+          hideContextMenu();
+        }
+      }
+    }
+
+    function removeLinkFromImage() {
+      if (currentImage) {
+        let parent = currentImage.parentNode;
+        if (parent.tagName === 'A') {
+          // Remove the <a> tag, but keep the image
+          parent.parentNode.insertBefore(currentImage, parent);
+          parent.remove();
+          hideContextMenu();
+        } else {
+          alert("The selected image is not within a link.");
+        }
+      }
+    }
+  </script>
+
+</body>
+
+</html>
