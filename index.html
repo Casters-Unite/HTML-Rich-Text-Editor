@@ -266,6 +266,29 @@
       position: absolute !important;
       z-index: 1;
     }
+	
+    .dropdownColorPicker {
+	block-size: 25px;
+    cursor: pointer;
+    border-width: 0px;
+    border-style: solid;
+    border-radius: 0%;
+    border-color: rgba(0,0,0,0);
+    width:  25px;
+    height: 25px;
+    padding: 0px;
+    margin: 0px;
+    background-color: rgba(0,0,0,0);
+	}
+	
+	.colorpicker {
+    cursor: pointer;
+    border-width: 0px;
+    border-style: solid;
+    border-radius: 0%;
+    border-color: rgba(0,0,0,0);
+    background-color: rgba(0,0,0,0);
+	}
   </style>
 </head>
 
@@ -321,8 +344,8 @@
         <option value="7">Very Large</option>
       </select>
 
-      <input type="color" id="textColor" onchange="formatDoc('foreColor', this.value)" title="Text Color">
-      <input type="color" id="highlightColor" onchange="highlightText(this.value)" title="Highlight Color">
+      <input class="colorpicker" type="color" id="textColor" onchange="formatDoc('foreColor', this.value)" title="Text Color">
+      <input class="colorpicker" type="color" id="highlightColor" onchange="highlightText(this.value)" title="Highlight Color">
 
       <!-- Dropdown -->
       <div class="dropdown">
@@ -365,7 +388,13 @@
 
   <!-- Text Context Menu -->
   <div id="textContextMenu">
-    <div class="dropdown">
+    <button onclick="formatDoc('justifyLeft')">Align Left</button>
+    <button onclick="formatDoc('justifyCenter')">Align Center</button>
+    <button onclick="formatDoc('justifyRight')">Align Right</button>
+    <button onclick="formatDoc('underline')">Underline</button>
+    <input class="dropdownColorPicker" type="color" onchange="formatDoc('foreColor', this.value)" title="Text Color">
+    <input class="dropdownColorPicker" type="color" onchange="highlightText(this.value)" title="Highlight Color">
+	    <div class="dropdown">
       <button class="dropdown-button">Clear Formatting</button>
       <div class="dropdown-content">
         <button onclick="clearFormatting('all')">All Formatting</button>
@@ -376,12 +405,6 @@
         <button onclick="clearFormatting('backColor')">Highlight Color</button>
       </div>
     </div>
-    <button onclick="formatDoc('justifyLeft')">Align Left</button>
-    <button onclick="formatDoc('justifyCenter')">Align Center</button>
-    <button onclick="formatDoc('justifyRight')">Align Right</button>
-    <button onclick="formatDoc('underline')">Underline</button>
-    <input type="color" onchange="formatDoc('foreColor', this.value)" title="Text Color">
-    <input type="color" onchange="highlightText(this.value)" title="Highlight Color">
   </div>
 
   <script>
@@ -838,8 +861,8 @@
     function deleteImage() {
       if (currentImage) {
         currentImage.remove();
-        currentImage = null; // Clear the current image
-        hideContextMenu();    // Hide the context menu
+        currentImage = null;
+        hideContextMenu();
       }
     }
 
